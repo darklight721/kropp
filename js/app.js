@@ -1,5 +1,4 @@
 (function($){
-
 	var Cropper = function() {
 		var _crop = { x : -100, y : -100, w : 100, h : 100 };
 		var _cropLimit = { w : 30, h : 30 };
@@ -8,6 +7,7 @@
 		var _anchor = { x : 0, y : 0 };
 		var _markers = [];
 		var _this = this;
+		var _emphasizeInterval;
 		
 		// constant
 		this.moveType = { MOUSE : 0, KEY : 1 };
@@ -84,8 +84,10 @@
 		};
 		
 		this.emphasizeCrop = function(isEmphasize) {
+			clearInterval(_emphasizeInterval);
+			
 			var alpha = isEmphasize ? 0.5 : 1.0;
-			var interval = setInterval(function(){
+			_emphasizeInterval = setInterval(function(){
 				// clean canvas
 				ctx_crop.clearRect(0,0,cnv_crop.width,cnv_crop.height);
 				// draw semiblack layer
@@ -98,14 +100,14 @@
 				{
 					alpha += 0.1;
 					if (alpha > 1.0)
-						clearInterval(interval);
+						clearInterval(_emphasizeInterval);
 				}
 				else
 				{
 					alpha -= 0.1;
 					if (alpha < 0.5)
 					{
-						clearInterval(interval);
+						clearInterval(_emphasizeInterval);
 						_this.drawCropMarkers();
 					}
 				}
@@ -344,9 +346,26 @@
 			cnv_output.height = _crop.h;
 			ctx_output.putImageData(croppedData,0,0);
 		};
+		
+		this.rotateImage = function(isClockwise) {
+			if (!_image) return;
+
+			ctx_image.translate(cnv_image.width/2,cnv_image.height/2);
+			
+			if (isClockwise)
+				ctx_image.rotate(5*Math.PI/180);
+			else
+				ctx_image.rotate(-5*Math.PI/180);
+			
+			ctx_image.translate(-cnv_image.width/2,-cnv_image.height/2);
+			ctx_image.drawImage(_image,0,0,cnv_image.width,cnv_image.height);
+			
+		};
 	};
 
 	function readFile(file) {
+		if (!file) return;
+		
 		// Only process image files
 		var imageType = /image.*/;
 		if (!file.type.match(imageType))
@@ -488,14 +507,14 @@
 		var isScaleUp = false;
 		
 		if (evt.wheelDelta)
-			isScaleUp = evt.wheelDelta < 0;
+			isScaleUp = evt.wheelDelta > 0;
 		else if (evt.detail)
-			isScaleUp = evt.detail > 0;
+			isScaleUp = evt.detail < 0;
 			
 		cropper.scaleImage(isScaleUp);
 	}
 	
-	function handleKeyUp(evt) {
+	function handleKeyDown(evt) {
 		var pos = { x : 0, y : 0, type : cropper.moveType.KEY };
 		switch(evt.keyCode)
 		{
@@ -507,14 +526,16 @@
 					 break;
 			case 40: pos.y = 5;
 					 break;
+			case 188: cropper.rotateImage(false);
+					  return;
+			case 190: cropper.rotateImage(true);
+					  return;
 		}
 		cropper.moveCrop(pos);
 	}
 	
 	var isMoveCrop = false;
 	var isResizeCrop = false;
-	
-	var cropper = new Cropper();
 	
 	var cnv_container = $("#cnv_container")[0];
 	
@@ -527,7 +548,9 @@
 	
 	var cnv_output = $("#cnv_output")[0];
 	var ctx_output = cnv_output.getContext("2d");
-
+	
+	var cropper = new Cropper();
+	
 	// add drag and drop to canvas
 	$(cnv_crop).bind('dragover',handleDragOver);
 	$(cnv_crop).bind('dragleave',handleDragLeave);
@@ -539,14 +562,23 @@
 	$(cnv_crop).bind('mouseup',handleMouseUp);
 	$(cnv_crop).bind('mousewheel DOMMouseScroll',handleMouseWheel);
 	// add keyevents
-	$("body").bind('keyup',handleKeyUp);
+	$("body").bind('keydown',handleKeyDown);
 	
 	// control elements
+	var open_picture = $("#open_picture")[0];
+	var input_file = $("#input_file")[0];
 	var crop_width = $("#crop_width")[0];
 	var crop_height = $("#crop_height")[0];
 	var crop_it = $("#crop_it")[0];
 	
 	// add event listeners
+	$(open_picture).bind('click',function(){
+		$(input_file).click();
+	});
+	$(input_file).bind('change',function(evt){
+		if (evt.target.files)
+			readFile(evt.target.files[0]);
+	});
 	$(crop_width).bind('change',function(){
 		var width = parseInt(this.value,10);
 		cropper.setCrop({ w : width });
