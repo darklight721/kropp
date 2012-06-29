@@ -239,7 +239,7 @@
 			_anchor.crop = $.extend({},_crop);
 		};
 		
-		this.resizeCrop = function(mousePos) {
+		this.resizeCrop = function(mousePos,isMaintainRatio) {
 			var newX = _anchor.crop.x, newY = _anchor.crop.y,
 				newW = _anchor.crop.w, newH = _anchor.crop.h;
 				
@@ -247,26 +247,26 @@
 			{
 				case 0: newX += mousePos.x - _anchor.x;
 						newW += _anchor.x - newX;
-						newY += mousePos.y - _anchor.y;
+						newY += isMaintainRatio ? mousePos.x - _anchor.x : mousePos.y - _anchor.y;
 						newH += _anchor.y - newY;
 						break;
 				case 1: newY += mousePos.y - _anchor.y;
 						newH += _anchor.y - newY;
 						break;
 				case 2: newW += mousePos.x - _anchor.x;
-						newY += mousePos.y - _anchor.y;
+						newY += isMaintainRatio ? -(mousePos.x - _anchor.x) : mousePos.y - _anchor.y;
 						newH += _anchor.y - newY;
 						break;
 				case 3: newW += mousePos.x - _anchor.x;
 						break;
 				case 4: newW += mousePos.x - _anchor.x;
-						newH += mousePos.y - _anchor.y;
+						newH += isMaintainRatio ? mousePos.x - _anchor.x : mousePos.y - _anchor.y;
 						break;
 				case 5:	newH += mousePos.y - _anchor.y;
 						break;
 				case 6: newX += mousePos.x - _anchor.x;
 						newW += _anchor.x - newX;
-						newH += mousePos.y - _anchor.y;
+						newH += isMaintainRatio ? -(mousePos.x - _anchor.x) : mousePos.y - _anchor.y;
 						break;
 				case 7: newX += mousePos.x - _anchor.x;
 						newW += _anchor.x - newX;
@@ -451,7 +451,7 @@
 		{
 			if (isResizeCrop)
 			{
-				cropper.resizeCrop(mousePos);
+				cropper.resizeCrop(mousePos,isShiftDown);
 			}
 			else
 			{
@@ -519,23 +519,37 @@
 		switch(evt.keyCode)
 		{
 			case 37: pos.x = -5;
+					 cropper.moveCrop(pos);
 					 break;
 			case 38: pos.y = -5;
+					 cropper.moveCrop(pos);
 					 break;
 			case 39: pos.x = 5;
+					 cropper.moveCrop(pos);
 					 break;
 			case 40: pos.y = 5;
+					 cropper.moveCrop(pos);
 					 break;
 			case 188: cropper.rotateImage(false);
-					  return;
+					  break;
 			case 190: cropper.rotateImage(true);
-					  return;
+					  break;
+			case 16: isShiftDown = true;
+					 break;
 		}
-		cropper.moveCrop(pos);
+	}
+
+	function handleKeyUp(evt) {
+		switch (evt.keyCode)
+		{
+			case 16: isShiftDown = false;
+					 break;
+		}
 	}
 	
 	var isMoveCrop = false;
 	var isResizeCrop = false;
+	var isShiftDown = false;
 	
 	var cnv_container = $("#cnv_container")[0];
 	
@@ -563,6 +577,7 @@
 	$(cnv_crop).bind('mousewheel DOMMouseScroll',handleMouseWheel);
 	// add keyevents
 	$("body").bind('keydown',handleKeyDown);
+	$("body").bind('keyup',handleKeyUp);
 	
 	// control elements
 	var open_picture = $("#open_picture")[0];
